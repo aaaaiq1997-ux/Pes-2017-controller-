@@ -1,0 +1,42 @@
+
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '*.zip'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Extract project
+        run: |
+          mkdir project
+          unzip -q ./*.zip -d project
+          find project -name gradlew -type f | head -1 > gradle_path.txt
+          test -s gradle_path.txt
+          echo "PROJECT_DIR=$(dirname "$(cat gradle_path.txt)")" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        run: |
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PES-2017-APK
+          path: project/**/app/build/outputs/apk/debug/*.apk
